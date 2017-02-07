@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/home/yglee/github/PokeGOAPI-Java/library/build/libs/PokeGOAPI-library-all-0.4.1.jar" sourcepath="/home/yglee/github/PokeGOAPI-Java/library/src"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
