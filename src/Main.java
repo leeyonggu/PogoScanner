@@ -1,9 +1,8 @@
 public class Main {
 	public static void main(String[] args) {
-		int refreshIntervalInSec = 10;
-		PogoScanner ps = new PogoScanner(refreshIntervalInSec);
+		PogoScanner ps = new PogoScanner();
 		ps.Initialize();
-		ps.GetCatchablePokemons();
+		ps.StartScanning();
 		
 		//GoogleAccount.getRefreshToken();
 	}
