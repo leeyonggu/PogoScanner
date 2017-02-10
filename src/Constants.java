@@ -9,8 +9,13 @@ import com.pokegoapi.util.hash.pokehash.PokeHashProvider;
 
 public class Constants {
 	public static final int REFRESH_INTERVAL_SEC = 10;
-	public static Vector<PokeStop> pokeStops;
 	public static final String POKEHASH_KEY = "";
+	
+	// 광성교회
+	public static final double LATITUDE = 37.477380;
+	public static final double LONGITUDE = 126.963337;
+	
+	public static Vector<PokeStop> pokeStops;
 	
 	public static void Initialize() {
 		pokeStops = new Vector<PokeStop>();

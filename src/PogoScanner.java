@@ -134,7 +134,7 @@ public class PogoScanner {
 				accounts.add(account);
 				numOfAccounts++;
 				
-				if (1 == numOfAccounts) break; // Captcha Test
+				//if (1 == numOfAccounts) break; // Captcha Test
 			}
 			in.close();
 		}
