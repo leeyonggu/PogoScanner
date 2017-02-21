@@ -49,8 +49,14 @@ public class PogoScanner {
 			System.out.println("\nScan Count: " + this.scanCount);
 			
 			try {
+				long start = System.nanoTime();
+				
 				this.GetCatchablePokemons();
 				this.PrintCatchablePokemons();
+				
+				long end = System.nanoTime();
+				double elapsedInSec = (end - start) / 1000000000;
+				log(">>>>> Scan Time Elapsed: " + elapsedInSec);
 				
 				Thread.sleep(Constants.REFRESH_INTERVAL_SEC * 1000);	
 			}
@@ -94,25 +100,6 @@ public class PogoScanner {
 		log("===== End GetCatchablePokemons");
 	}
 	
-	public void TestSort() {
-		this.pokemons.clear();
-		
-		MyPokemon m1 = new MyPokemon("1", "test1", 12, 12, 12);
-		MyPokemon m2 = new MyPokemon("2", "test2", 10, 10, 10);
-		MyPokemon m3 = new MyPokemon("3", "test3", 15, 15, 15);
-		this.pokemons.add(m1);
-		this.pokemons.add(m2);
-		this.pokemons.add(m3);
-		
-		// sort by iv percent
-		Collections.sort(this.pokemons, new MyPokemonComparator());
-		for (MyPokemon mp : this.pokemons) {
-			log(mp.toString());
-		}
-		
-		//this.PrintCatchablePokemons();
-	}
-	
 	public void PrintCatchablePokemons() {
 		for (MyPokemon mp : this.pokemons) {
 			System.out.println(mp);
@@ -127,7 +114,9 @@ public class PogoScanner {
 			String line;
 			int numOfAccounts = 0;
 			while((line = in.readLine()) != null) {
-				//System.out.println("line: " + line);
+				if (line.startsWith("#")) {
+					continue;
+				}
 				
 				String[] fields = line.split(",");
 				ScannerAccount account = new ScannerAccount(fields[0], fields[1]);

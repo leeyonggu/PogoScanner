@@ -9,14 +9,22 @@ outputFilePath = sys.argv[2]
 
 outputFile = open(outputFilePath, 'w')
 inputFile = open(inputFilePath, 'r')
-for line in inputFile:
-	dict = json.loads(line)
-	ps = dict['pokestop']
-	stoplist = ps['list']
-	for stop in stoplist:
-		outputLine = stop['pokestop_id'] + ',name,' + stop['latitude'] + ',' + stop['longitude'] + ',0.0'
-		#print(outputLine)
+lines = inputFile.readlines()
+
+jsonStr = ""
+for line in lines:
+	jsonStr += line
+
+dict = json.loads(jsonStr)
+cells = dict['cells']
+for item in cells:
+	cell = cells[item]
+	pokestoplist = cell['pokestop']['list']
+	for pokestop in pokestoplist:
+		outputLine = pokestop['pokestop_id'] + ',name,' + pokestop['latitude'] + ',' + pokestop['longitude'] + ',0.0'
+		print(outputLine)
 		outputFile.write(outputLine + '\n')
 
+inputFile.close()
 outputFile.close()
 

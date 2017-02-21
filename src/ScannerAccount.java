@@ -4,30 +4,35 @@ import java.util.Set;
 import java.util.Vector;
 
 import com.pokegoapi.api.PokemonGo;
+import com.pokegoapi.api.map.Point;
+import com.pokegoapi.api.map.fort.Pokestop;
+import com.pokegoapi.api.map.fort.PokestopLootResult;
 import com.pokegoapi.api.map.pokemon.CatchablePokemon;
 import com.pokegoapi.api.map.pokemon.encounter.EncounterResult;
+import com.pokegoapi.auth.GoogleAutoCredentialProvider;
 import com.pokegoapi.auth.GoogleUserCredentialProvider;
 import com.pokegoapi.exceptions.CaptchaActiveException;
 import com.pokegoapi.exceptions.LoginFailedException;
 import com.pokegoapi.exceptions.NoSuchItemException;
 import com.pokegoapi.exceptions.RemoteServerException;
 import com.pokegoapi.exceptions.hash.HashException;
+import com.pokegoapi.util.path.Path;
 
 import POGOProtos.Data.PokemonDataOuterClass.PokemonData;
 import okhttp3.OkHttpClient;
 
 public class ScannerAccount implements Runnable {
 	public String googleAccountName;
-	public String refreshToken;
+	public String password;
 	public Vector<MyPokemon> pokemons;
 	private PokemonGo go;
 	private int pokeStopStartIndex;
 	private int pokeStopEndIndex;
 	private int catchCount;
 	
-	public ScannerAccount(String googleAccountName, String refreshToken) {
+	public ScannerAccount(String googleAccountName, String password) {
 		this.googleAccountName = googleAccountName;
-		this.refreshToken = refreshToken;
+		this.password = password;
 		this.pokemons = new Vector<MyPokemon>();
 		this.go = null;
 		this.catchCount = 0;
@@ -39,7 +44,7 @@ public class ScannerAccount implements Runnable {
 		OkHttpClient http = new OkHttpClient();
 		try {
 			go = new PokemonGo(http);
-			go.login(new GoogleUserCredentialProvider(http, refreshToken), Constants.getHashProvider());
+			go.login(new GoogleAutoCredentialProvider(http, googleAccountName, password), Constants.getHashProvider());
 			
 		}
 		catch (Exception e) {
@@ -54,6 +59,56 @@ public class ScannerAccount implements Runnable {
 		this.pokeStopEndIndex = pokeStopEndIndex;
 	}
 	
+	private void lootPokestops()
+		throws LoginFailedException, CaptchaActiveException, RemoteServerException, NoSuchItemException, InterruptedException, HashException {
+		log("Start finding lootable pokestops");
+		
+		Set<Pokestop> pokestops = go.getMap().getMapObjects().getPokestops();
+		Pokestop targetStop = null;
+		for (Pokestop pokestop : pokestops) {
+			if (pokestop.inRange() && pokestop.canLoot(true)) {
+				targetStop = pokestop;
+				break;
+			}
+		}
+		if (null != targetStop) {
+			log("lootable pokestop is found");
+			PokestopLootResult result = targetStop.loot();
+			log("pokestop loot result: " + result.getResult());
+		}
+	}
+	
+	private void getPokemonInfo() 
+			throws LoginFailedException, CaptchaActiveException, RemoteServerException, NoSuchItemException, InterruptedException, HashException {
+		Set<CatchablePokemon> catchablePokemon = go.getMap().getMapObjects().getPokemon();
+		log("Pokemon in area: " + catchablePokemon.size());
+		
+		// get pokemons
+		for (CatchablePokemon cp : catchablePokemon) {
+			// Captcha Test
+			if (false) {
+				MyPokemon mp = new MyPokemon(cp.getPokemonIdValue() + "", cp.getPokemonId().toString(), 10, 10, 10);
+				mp.SetLocation(cp.getLatitude(), cp.getLongitude());
+				this.pokemons.add(mp);
+				log(mp.toString());
+			}
+	
+			if (true) {
+				EncounterResult encResult = cp.encounterPokemon();
+				if (encResult.wasSuccessful()) {
+					PokemonData pokeData = encResult.getPokemonData();
+					MyPokemon mp = new MyPokemon(cp.getPokemonIdValue() + "", cp.getPokemonId().toString(), pokeData.getIndividualAttack(), pokeData.getIndividualDefense(), pokeData.getIndividualStamina());
+					mp.SetLocation(cp.getLatitude(), cp.getLongitude());
+					this.pokemons.add(mp);
+					log(mp.toString());
+				}
+				
+				// Captcha Test
+				//Thread.sleep(5000);
+			}
+		}
+	}
+	
 	public void GetCatchablePokemons() 
 			throws LoginFailedException, CaptchaActiveException, RemoteServerException, NoSuchItemException, InterruptedException, HashException {
 		log("Start GetCatchablePokemons, stop-start-index: " + pokeStopStartIndex + ", stop-end-index: " + pokeStopEndIndex);
@@ -66,7 +121,10 @@ public class ScannerAccount implements Runnable {
 			// captcha check
 			this.catchCount++;
 			if (catchCount % 1 == 0) {
-				log("========== Captcha: " + go.hasChallenge());				
+				if (go.hasChallenge()) {
+					log("========== !!!!! Captcha True !!!!! ==========");	
+					break;
+				}
 			}
 			
 			// set location
@@ -81,42 +139,58 @@ public class ScannerAccount implements Runnable {
 			go.getMap().awaitUpdate();
 			long mapAwaitingEnd = System.nanoTime();
 			log("... Map awaiting finished, elapsed: " + (mapAwaitingEnd - mapAwaitingStart) / (double)1000000000 + "sec");
-
-
-			Set<CatchablePokemon> catchablePokemon = go.getMap().getMapObjects().getPokemon();
-			log("Pokemon in area: " + catchablePokemon.size());
+			//Thread.sleep(10000);
 			
-			// get pokemons
-			for (CatchablePokemon cp : catchablePokemon) {
-				// Captcha Test
-				/*
-				MyPokemon mp = new MyPokemon(cp.getPokemonIdValue() + "", cp.getPokemonId().toString(), 10, 10, 10);
-				mp.SetLocation(cp.getLatitude(), cp.getLongitude());
-				this.pokemons.add(mp);
-				log(mp.toString());
-				*/
-		
-				if (true) {
-					EncounterResult encResult = cp.encounterPokemon();
-					if (encResult.wasSuccessful()) {
-						PokemonData pokeData = encResult.getPokemonData();
-						MyPokemon mp = new MyPokemon(cp.getPokemonIdValue() + "", cp.getPokemonId().toString(), pokeData.getIndividualAttack(), pokeData.getIndividualDefense(), pokeData.getIndividualStamina());
-						mp.SetLocation(cp.getLatitude(), cp.getLongitude());
-						this.pokemons.add(mp);
-						log(mp.toString());
-					}
-				}
-			}
+			this.lootPokestops();
 			
+			//this.getPokemonInfo();
+
 			// Captcha Test
-			Thread.sleep(3000);
+			//Thread.sleep(10000);
 			
 			long end = System.nanoTime();
-			long elapsedInMs = (end - start) / 1000000;
-			log("Pokestop processing time: " + (double)elapsedInMs/1000 + "sec");
+			log("Pokestop processing time: " + (end - start) / (double)1000000000 + "sec");
 		}
 		
 		log("End GetCatchablePokemons");
+	}
+	
+	public void LootingPokestops() {
+		log("Start Looting Pokestops");
+		try {
+			Point initialPoint = new Point(Constants.pokeStops.get(0).latitude, Constants.pokeStops.get(0).longitude);
+			go.setLocation(initialPoint.getLatitude(), initialPoint.getLongitude(), 0.0);
+			Thread.sleep(2000);
+			
+			for (int i = 1; i <= pokeStopEndIndex; ++i) {
+				PokeStop dest = Constants.pokeStops.get(i);
+				goToLocation(new Point(dest.latitude, dest.longitude));
+				lootPokestops();
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void goToLocation(Point dest) {
+		Path path = new Path(go.getPoint(), dest, Constants.SPEED_KMPH);
+		log("Traveling to " + dest + " at " + Constants.SPEED_KMPH + "KMPH!");
+		path.start(go);
+		try {
+			while (!path.isComplete()) {
+				Point point = path.calculateIntermediate(go);
+				go.setLatitude(point.getLatitude());
+				go.setLongitude(point.getLongitude());
+				log("Time left: " + (int) (path.getTimeLeft(go) / 1000) + "seconds" );
+				Thread.sleep(2000);
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		log("Finished traveling to pokestop!");
 	}
 	
 	private void log(String msg) {
@@ -126,7 +200,8 @@ public class ScannerAccount implements Runnable {
 	@Override
 	public void run() {
 		try {
-			this.GetCatchablePokemons();
+			//this.GetCatchablePokemons();
+			this.LootingPokestops();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
